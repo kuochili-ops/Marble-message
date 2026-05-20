@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>32x32 高精細點陣彈珠跑馬燈 (繽紛色彩版)</title>
+    <title>32x32 高精細點陣彈珠跑馬燈 (智能日期排版優化版)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -27,7 +27,7 @@
         .canvas-container {
             width: 100%;
             max-width: 1100px;
-            max-height: 68vh; 
+            max-height: 62vh; 
             aspect-ratio: 16 / 9;
             background: #040508;
             box-shadow: 0 20px 50px rgba(0,0,0,0.7);
@@ -45,38 +45,43 @@
             display: block;
         }
 
-        /* 現代化置底控制面板 */
+        /* 👑 全新優化：現代化高質感雙區塊控制面板 */
         .controls {
             width: 100%;
             max-width: 1100px;
             background: #131520;
             border: 1px solid #282a3a;
-            padding: 16px 24px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between; 
+            padding: 20px 24px;
+            border-radius: 14px;
+            display: grid;
+            grid-template-columns: 1.8fr 1.2fr; /* 黃金比例分配左、右大區塊 */
             gap: 24px;
             margin-top: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
         }
         
-        /* 純分享模式隱藏介面 */
+        /* 純分享模式完全隱藏介面 */
         .controls.pure-mode {
             display: none !important;
         }
 
-        /* 左側：輸入與顏色群組 */
-        .input-section {
+        /* 左側大區塊：內容管理區（垂直排列） */
+        .control-left {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* 左上：文字與顏色輸入列 */
+        .input-row {
             display: flex;
             align-items: center;
             gap: 10px;
-            flex: 2; 
-            min-width: 350px;
+            width: 100%;
         }
         input[type="text"] {
             flex: 1;
-            padding: 10px 14px;
+            padding: 12px 14px;
             font-size: 14px;
             border: 1px solid #282a3a;
             background: #090a10;
@@ -93,8 +98,8 @@
         /* 精緻的圓形色彩選擇器 */
         .color-picker-wrapper {
             position: relative;
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             border: 2px solid #282a3a;
             overflow: hidden;
@@ -111,86 +116,123 @@
             position: absolute;
             top: -5px;
             left: -5px;
-            width: 46px;
-            height: 46px;
+            width: 50px;
+            height: 50px;
             cursor: pointer;
             border: none;
             background: transparent;
         }
 
-        /* 中間：速度控制群組 */
-        .slider-section {
+        /* 左下：附加選項區 */
+        .options-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a0a5c0;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+        .checkbox-label:hover {
+            color: #fff;
+        }
+        .checkbox-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #3b82f6;
+            cursor: pointer;
+        }
+
+        /* 右側大區塊：物理參數與系統動作 */
+        .control-right {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 12px;
+            border-left: 1px solid #222435;
+            padding-left: 24px;
+        }
+
+        /* 速度調節列 */
+        .slider-row {
             display: flex;
             align-items: center;
             gap: 12px;
             background: #1c1e2e;
-            padding: 8px 16px;
+            padding: 10px 16px;
             border-radius: 8px;
             border: 1px solid #282a3a;
             color: #a0a5c0;
             font-size: 14px;
-            user-select: none;
-            flex: 1;
-            min-width: 180px;
-            justify-content: center;
         }
         input[type="range"] {
             cursor: pointer;
-            width: 100%;
-            max-width: 120px;
+            flex: 1;
             accent-color: #3b82f6;
         }
         .speed-label {
             font-weight: 500;
             color: #8e94b1;
+            white-space: nowrap;
         }
         #speedValue {
             font-family: monospace;
             font-weight: bold;
             color: #3b82f6;
             background: #090a10;
-            padding: 2px 6px;
+            padding: 2px 8px;
             border-radius: 4px;
             text-align: center;
+            min-width: 38px;
         }
 
-        /* 右側：動作群組 */
-        .action-section {
+        /* 按鈕動作列 */
+        .action-row {
             display: flex;
             align-items: center;
             gap: 10px;
+            width: 100%;
         }
 
-        /* 按鈕基礎樣式 */
+        /* 按鈕核心樣式 */
         button {
-            padding: 10px 20px;
+            flex: 1;
+            padding: 12px 16px;
             font-size: 14px;
             font-weight: 600;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
+            transition: background 0.2s, transform 0.1s, border-color 0.2s;
             white-space: nowrap;
+            text-align: center;
         }
         button:active {
-            transform: scale(0.97);
+            transform: scale(0.98);
         }
         
         .play-btn {
             background: #2563eb;
             color: white;
+            flex: 1.2; /* 流動按鈕稍微寬一點，強調主要操作 */
         }
         .play-btn:hover {
             background: #1d4ed8;
         }
 
         .share-btn {
-            background: #374151;
-            color: #f3f4f6;
-            border: 1px solid #4b5563;
+            background: #2d3548;
+            color: #e5e7eb;
+            border: 1px solid #3f485e;
         }
         .share-btn:hover {
-            background: #4b5563;
+            background: #3f485e;
         }
         .share-btn.copied {
             background: #10b981;
@@ -216,22 +258,21 @@
             100% { opacity: 1; }
         }
 
+        /* RWD 斷點優化：防止極端小螢幕元件碎裂 */
         @media (max-width: 900px) {
             body {
                 overflow-y: auto;
                 justify-content: center;
             }
             .controls {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 14px;
+                grid-template-columns: 1fr;
+                gap: 16px;
+                padding: 16px;
             }
-            .input-section, .slider-section, .action-section {
-                width: 100%;
-                min-width: 0;
-            }
-            .action-section {
-                justify-content: flex-end;
+            .control-right {
+                border-left: none;
+                padding-left: 0;
+                gap: 16px;
             }
         }
     </style>
@@ -242,27 +283,37 @@
         <canvas id="marbleCanvas"></canvas>
     </div>
 
+    <!-- 優化後結構分明的完整呈現介面 -->
     <div class="controls" id="controlPanel">
-        <!-- 左側：輸入群組 + 顏色挑選器 -->
-        <div class="input-section">
-            <div class="color-picker-wrapper" title="更換文字顏色">
-                <input type="color" id="textColorPicker" value="#ff9f43">
+        <!-- 左側：內容配置大區塊 -->
+        <div class="control-left">
+            <div class="input-row">
+                <div class="color-picker-wrapper" title="更換文字顏色">
+                    <input type="color" id="textColorPicker" value="#ff9f43">
+                </div>
+                <input type="text" id="textInput" value="歡迎光臨 歡慶開幕" placeholder="請輸入跑馬燈文字...">
             </div>
-            <input type="text" id="textInput" value="客製化色彩 炫彩霓虹" placeholder="請輸入文字...">
-            <button id="renderBtn" class="play-btn">開始流動</button>
+            <div class="options-row">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="addDateCheckbox">
+                    <span>訊息末尾自動加入當天日期、星期</span>
+                </label>
+            </div>
         </div>
         
-        <!-- 中間：速度控制 -->
-        <div class="slider-section">
-            <span class="speed-label">速度</span>
-            <input type="range" id="speedSlider" min="1" max="20" step="0.5" value="8">
-            <span id="speedValue" style="min-width: 32px;">8.0</span>
-        </div>
+        <!-- 右側：參數微調與功能按鈕區 -->
+        <div class="control-right">
+            <div class="slider-row">
+                <span class="speed-label">流動速度</span>
+                <input type="range" id="speedSlider" min="1" max="20" step="0.5" value="8">
+                <span id="speedValue">8.0</span>
+            </div>
 
-        <!-- 右側：功能動作 -->
-        <div class="action-section">
-            <button id="shareBtn" class="share-btn">產生分享連結</button>
-            <button id="recordBtn" class="record-btn">錄影並下載</button>
+            <div class="action-row">
+                <button id="renderBtn" class="play-btn">開始流動</button>
+                <button id="shareBtn" class="share-btn">分享連結</button>
+                <button id="recordBtn" class="record-btn">錄影下載</button>
+            </div>
         </div>
     </div>
 
@@ -276,18 +327,16 @@
         const speedSlider = document.getElementById('speedSlider');
         const speedValue = document.getElementById('speedValue');
         const textColorPicker = document.getElementById('textColorPicker');
+        const addDateCheckbox = document.getElementById('addDateCheckbox');
         const controlPanel = document.getElementById('controlPanel');
 
-        const ASPECT_RATIO = 16 / 9;
         const MATRIX_ROWS = 32; 
         let MATRIX_COLS = 0; 
         let ballRadius = 0;   
 
-        // 底色靜態粒子樣式
         const COLOR_BG = '#1e272e'; 
         const COLOR_BG_GLOW = '#485460';   
 
-        // 🎨 顏色動態運算容器
         let currentTextColor = '#ff9f43';
         let currentTextColorGlow = '#fff2cc';
         let currentTextColorShadow = '#662c00';
@@ -305,27 +354,21 @@
         let isRecording = false;
         let totalStreamCols = 0;
 
-        // 監聽顏色選擇器的即時變化
         textColorPicker.addEventListener('input', (e) => {
             updatePalette(e.target.value);
         });
 
-        // 🚀 核心演算法：根據選擇的顏色，自動推算高亮與陰影，保持3D光澤感
         function updatePalette(hexColor) {
             currentTextColor = hexColor;
-            
-            // 將 HEX 轉為 RGB
             let r = parseInt(hexColor.slice(1, 3), 16);
             let g = parseInt(hexColor.slice(3, 5), 16);
             let b = parseInt(hexColor.slice(5, 7), 16);
 
-            // 計算反光高亮 (往白色靠攏)
             let nr = Math.min(255, Math.floor(r + (255 - r) * 0.7));
             let ng = Math.min(255, Math.floor(g + (255 - g) * 0.7));
             let nb = Math.min(255, Math.floor(b + (255 - b) * 0.7));
             currentTextColorGlow = `rgb(${nr}, ${ng}, ${nb})`;
 
-            // 計算深色陰影 (降低亮度)
             let dr = Math.max(0, Math.floor(r * 0.4));
             let dg = Math.max(0, Math.floor(g * 0.4));
             let db = Math.max(0, Math.floor(b * 0.4));
@@ -337,6 +380,16 @@
             speedValue.textContent = val.toFixed(1);
         });
 
+        // 📅 取得格式化日期與星期的函式 (例如: 5/21 星期四)
+        function getFormattedDateString() {
+            const now = new Date();
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+            const dayName = dayNames[now.getDay()];
+            return ` (${month}/${date} ${dayName})`;
+        }
+
         class MarqueeMarble {
             constructor(gridX, gridY, isText, targetX, targetY, enterDelay, speed) {
                 this.gridX = gridX;
@@ -344,10 +397,8 @@
                 this.isText = isText;
                 this.targetX = targetX;
                 this.targetY = targetY;
-
                 this.x = canvas.width + ballRadius * 2 + gridX * (ballRadius * 2);
                 this.y = targetY;
-
                 this.enterDelay = enterDelay; 
                 this.speed = speed;
                 this.hasArrivedPhase1 = false;
@@ -381,7 +432,6 @@
                 );
 
                 if (this.isText) {
-                    // 套用即時更換的色彩光學組合
                     gradient.addColorStop(0, currentTextColorGlow);
                     gradient.addColorStop(0.3, currentTextColor);
                     gradient.addColorStop(1, currentTextColorShadow);
@@ -455,8 +505,13 @@
             isMarqueePhase = false;
             marqueeDelayCounter = 0;
 
-            const text = textInput.value || " ";
-            const textMatrix = generateLongTextMatrix(text);
+            // 🚀 核心邏輯：檢查是否勾選加入日期，動態組合最終字串
+            let finalOutputText = textInput.value || " ";
+            if (addDateCheckbox.checked) {
+                finalOutputText += getFormattedDateString();
+            }
+
+            const textMatrix = generateLongTextMatrix(finalOutputText);
             const totalTextPixelsWidth = textMatrix[0].length;
 
             const firstTwoWordsWidth = Math.min(64, totalTextPixelsWidth);
@@ -520,7 +575,7 @@
             animate();
         }
 
-        // 錄影邏輯
+        // 錄影下載
         function startRecording() {
             if (isRecording) return;
             isRecording = true;
@@ -549,7 +604,7 @@
                 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `marble_marquee_color_${new Date().getTime()}.webm`;
+                a.download = `marble_marquee_date_${new Date().getTime()}.webm`;
                 document.body.appendChild(a);
                 a.click();
                 
@@ -558,7 +613,7 @@
                     URL.revokeObjectURL(url);
                 }, 100);
 
-                recordBtn.textContent = "錄影並下載";
+                recordBtn.textContent = "錄影下載";
                 recordBtn.classList.remove('recording');
                 isRecording = false;
             };
@@ -572,22 +627,22 @@
             mediaRecorder.stop();
         }
 
-        // 🔗 分享連結生成（加入顏色參數）
+        // 🔗 產生分享連結（新增 showDate 狀態傳遞）
         function generateShareLink() {
             const textValue = encodeURIComponent(textInput.value);
             const speedValue = speedSlider.value;
-            // 去掉 '#' 號以利 URL 參數安全傳遞
             const colorValue = textColorPicker.value.replace('#', '');
+            const showDateValue = addDateCheckbox.checked ? "1" : "0";
             
             const baseUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${baseUrl}?msg=${textValue}&speed=${speedValue}&color=${colorValue}`;
+            const shareUrl = `${baseUrl}?msg=${textValue}&speed=${speedValue}&color=${colorValue}&showDate=${showDateValue}`;
 
             navigator.clipboard.writeText(shareUrl).then(() => {
-                shareBtn.textContent = "網址已複製！";
+                shareBtn.textContent = "已複製！";
                 shareBtn.classList.add('copied');
                 
                 setTimeout(() => {
-                    shareBtn.textContent = "產生分享連結";
+                    shareBtn.textContent = "分享連結";
                     shareBtn.classList.remove('copied');
                 }, 2000);
             }).catch(err => {
@@ -600,14 +655,18 @@
             const msg = urlParams.get('msg');
             const speed = urlParams.get('speed');
             const color = urlParams.get('color');
+            const showDate = urlParams.get('showDate');
 
-            // 讀取顏色參數
             if (color) {
                 const hexColor = '#' + color;
                 textColorPicker.value = hexColor;
                 updatePalette(hexColor);
             } else {
                 updatePalette(textColorPicker.value);
+            }
+
+            if (showDate) {
+                addDateCheckbox.checked = (showDate === "1");
             }
 
             if (msg) {
