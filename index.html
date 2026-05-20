@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>32x32 高精細點陣彈珠跑馬燈 (智能日期排版優化版)</title>
+    <title>32x32 高精細點陣彈珠跑馬燈 (文字緊湊排版優化版)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -45,7 +45,7 @@
             display: block;
         }
 
-        /* 👑 全新優化：現代化高質感雙區塊控制面板 */
+        /* 現代化高質感雙區塊控制面板 */
         .controls {
             width: 100%;
             max-width: 1100px;
@@ -54,18 +54,17 @@
             padding: 20px 24px;
             border-radius: 14px;
             display: grid;
-            grid-template-columns: 1.8fr 1.2fr; /* 黃金比例分配左、右大區塊 */
+            grid-template-columns: 1.8fr 1.2fr;
             gap: 24px;
             margin-top: 16px;
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
         }
         
-        /* 純分享模式完全隱藏介面 */
         .controls.pure-mode {
             display: none !important;
         }
 
-        /* 左側大區塊：內容管理區（垂直排列） */
+        /* 左側大區塊 */
         .control-left {
             display: flex;
             flex-direction: column;
@@ -95,7 +94,7 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
         }
 
-        /* 精緻的圓形色彩選擇器 */
+        /* 圓形色彩選擇器 */
         .color-picker-wrapper {
             position: relative;
             width: 40px;
@@ -149,7 +148,7 @@
             cursor: pointer;
         }
 
-        /* 右側大區塊：物理參數與系統動作 */
+        /* 右側大區塊 */
         .control-right {
             display: flex;
             flex-direction: column;
@@ -200,7 +199,6 @@
             width: 100%;
         }
 
-        /* 按鈕核心樣式 */
         button {
             flex: 1;
             padding: 12px 16px;
@@ -220,7 +218,7 @@
         .play-btn {
             background: #2563eb;
             color: white;
-            flex: 1.2; /* 流動按鈕稍微寬一點，強調主要操作 */
+            flex: 1.2;
         }
         .play-btn:hover {
             background: #1d4ed8;
@@ -258,7 +256,6 @@
             100% { opacity: 1; }
         }
 
-        /* RWD 斷點優化：防止極端小螢幕元件碎裂 */
         @media (max-width: 900px) {
             body {
                 overflow-y: auto;
@@ -283,15 +280,13 @@
         <canvas id="marbleCanvas"></canvas>
     </div>
 
-    <!-- 優化後結構分明的完整呈現介面 -->
     <div class="controls" id="controlPanel">
-        <!-- 左側：內容配置大區塊 -->
         <div class="control-left">
             <div class="input-row">
                 <div class="color-picker-wrapper" title="更換文字顏色">
                     <input type="color" id="textColorPicker" value="#ff9f43">
                 </div>
-                <input type="text" id="textInput" value="歡迎光臨 歡慶開幕" placeholder="請輸入跑馬燈文字...">
+                <input type="text" id="textInput" value="限時特賣 12345678" placeholder="請輸入跑馬燈文字...">
             </div>
             <div class="options-row">
                 <label class="checkbox-label">
@@ -301,7 +296,6 @@
             </div>
         </div>
         
-        <!-- 右側：參數微調與功能按鈕區 -->
         <div class="control-right">
             <div class="slider-row">
                 <span class="speed-label">流動速度</span>
@@ -380,14 +374,14 @@
             speedValue.textContent = val.toFixed(1);
         });
 
-        // 📅 取得格式化日期與星期的函式 (例如: 5/21 星期四)
+        // 📅 拿掉括號的純淨版日期時間字串
         function getFormattedDateString() {
             const now = new Date();
             const month = now.getMonth() + 1;
             const date = now.getDate();
             const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
             const dayName = dayNames[now.getDay()];
-            return ` (${month}/${date} ${dayName})`;
+            return ` ${month}/${date} ${dayName}`;
         }
 
         class MarqueeMarble {
@@ -463,38 +457,84 @@
             MATRIX_COLS = Math.floor(width / (ballRadius * 2));
         }
 
-        function generateLongTextMatrix(text) {
-            const fontCanvas = document.createElement('canvas');
-            const fontCtx = fontCanvas.getContext('2d');
-            fontCtx.imageSmoothingEnabled = false;
-            
+        // 🚀 核心升級：具備「動態字元邊界裁切（壓縮間距）」的點陣生成引擎
+        function generateCompactDynamicMatrix(text) {
             const size = 32;
-            fontCanvas.width = size * text.length;
-            fontCanvas.height = size;
-
-            fontCtx.fillStyle = '#000';
-            fontCtx.fillRect(0, 0, fontCanvas.width, fontCanvas.height);
-
-            fontCtx.font = `bold 30px "PMingLiU", "MingLiU", "SimSun", "Songti TC", serif`;
-            fontCtx.textBaseline = 'middle';
-            fontCtx.textAlign = 'center';
-            fontCtx.fillStyle = '#fff';
+            const singleCanvas = document.createElement('canvas');
+            const singleCtx = singleCanvas.getContext('2d');
+            singleCanvas.width = size;
+            singleCanvas.height = size;
+            
+            let finalMatrix = Array.from({ length: size }, () => []);
 
             for (let i = 0; i < text.length; i++) {
-                fontCtx.fillText(text[i], size * i + (size / 2), (size / 2) + 1);
-            }
+                const char = text[i];
+                
+                // 清空畫布準備繪製單一字元
+                singleCtx.fillStyle = '#000';
+                singleCtx.fillRect(0, 0, size, size);
+                
+                singleCtx.font = `bold 30px "PMingLiU", "MingLiU", "SimSun", "Songti TC", "Arial", sans-serif`;
+                singleCtx.textBaseline = 'middle';
+                singleCtx.textAlign = 'center';
+                singleCtx.fillStyle = '#fff';
+                singleCtx.fillText(char, size / 2, (size / 2) + 1);
 
-            const imgData = fontCtx.getImageData(0, 0, fontCanvas.width, fontCanvas.height);
-            const data = imgData.data;
+                const imgData = singleCtx.getImageData(0, 0, size, size);
+                const data = imgData.data;
 
-            let textMatrix = Array.from({ length: size }, () => []);
-            for (let y = 0; y < size; y++) {
-                for (let x = 0; x < fontCanvas.width; x++) {
-                    const idx = (y * fontCanvas.width + x) * 4;
-                    textMatrix[y].push(data[idx] > 120 ? 1 : 0);
+                // 提取這個字元的 32x32 布林陣列
+                let charGrid = Array.from({ length: size }, () => []);
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        const idx = (y * size + x) * 4;
+                        charGrid[y].push(data[idx] > 120 ? 1 : 0);
+                    }
+                }
+
+                // 🧐 掃描該字元的實體點陣邊界 (左邊界與右邊界)
+                let minX = size;
+                let maxX = 0;
+                let hasPixels = false;
+
+                for (let x = 0; x < size; x++) {
+                    for (let y = 0; y < size; y++) {
+                        if (charGrid[y][x] === 1) {
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                            hasPixels = true;
+                        }
+                    }
+                }
+
+                // 核心裁切邏輯
+                let startCol = 0;
+                let endCol = size - 1;
+
+                // 如果是空白字元，給予固定的窄間距
+                if (!hasPixels) {
+                    startCol = 0;
+                    endCol = 10; 
+                } else {
+                    // 如果是英數字或標點（通常左右留白極多），進行精確裁切，並補上 1 像素安全中斷點
+                    const charCode = char.charCodeAt(0);
+                    const isFullWidth = charCode > 255; // 判斷是否為中文字/全形
+                    
+                    if (!isFullWidth) {
+                        startCol = Math.max(0, minX - 1);
+                        endCol = Math.min(size - 1, maxX + 1);
+                    }
+                    // 全形中文字則維持原寬度不變，保留霸氣排版
+                }
+
+                // 將裁切後的局部欄位合併到最終的總矩陣中
+                for (let y = 0; y < size; y++) {
+                    for (let x = startCol; x <= endCol; x++) {
+                        finalMatrix[y].push(charGrid[y][x]);
+                    }
                 }
             }
-            return textMatrix;
+            return finalMatrix;
         }
 
         function buildScene() {
@@ -505,13 +545,13 @@
             isMarqueePhase = false;
             marqueeDelayCounter = 0;
 
-            // 🚀 核心邏輯：檢查是否勾選加入日期，動態組合最終字串
             let finalOutputText = textInput.value || " ";
             if (addDateCheckbox.checked) {
                 finalOutputText += getFormattedDateString();
             }
 
-            const textMatrix = generateLongTextMatrix(finalOutputText);
+            // 改用緊湊型字元矩陣生成器
+            const textMatrix = generateCompactDynamicMatrix(finalOutputText);
             const totalTextPixelsWidth = textMatrix[0].length;
 
             const firstTwoWordsWidth = Math.min(64, totalTextPixelsWidth);
@@ -604,7 +644,7 @@
                 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `marble_marquee_date_${new Date().getTime()}.webm`;
+                a.download = `marble_marquee_compact_${new Date().getTime()}.webm`;
                 document.body.appendChild(a);
                 a.click();
                 
@@ -627,7 +667,7 @@
             mediaRecorder.stop();
         }
 
-        // 🔗 產生分享連結（新增 showDate 狀態傳遞）
+        // 產生分享連結
         function generateShareLink() {
             const textValue = encodeURIComponent(textInput.value);
             const speedValue = speedSlider.value;
