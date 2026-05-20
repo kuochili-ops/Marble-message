@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>32x32 高精細點陣彈珠跑馬燈</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #0c0d12;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            width: 100vw;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            overflow: hidden;
+            padding: 20px;
+        }
+        
+        /* 16:9 畫布容器 */
+        .canvas-container {
+            width: 100%;
+            max-width: 1100px;
+            max-height: 68vh; 
+            aspect-ratio: 16 / 9;
+            background: #040508;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 3px solid #20222e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: auto; 
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* 現代化置底控制面板 */
+        .controls {
+            width: 100%;
+            max-width: 1100px;
+            background: #131520;
+            border: 1px solid #282a3a;
+            padding: 16px 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between; 
+            gap: 24px;
+            margin-top: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        /* 純分享模式隱藏介面 */
+        .controls.pure-mode {
+            display: none !important;
+        }
+
+        /* 左側：輸入群組 */
+        .input-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 2; 
+            min-width: 320px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px 14px;
+            font-size: 14px;
+            border: 1px solid #282a3a;
+            background: #090a10;
+            color: #fff;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        input[type="text"]:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        /* 中間：速度控制群組 */
+        .slider-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #1c1e2e;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid #282a3a;
+            color: #a0a5c0;
+            font-size: 14px;
+            user-select: none;
+            flex: 1;
+            min-width: 180px;
+            justify-content: center;
+        }
+        input[type="range"] {
+            cursor: pointer;
+            width: 100%;
+            max-width: 120px;
+            accent-color: #3b82f6;
+        }
+        .speed-label {
+            font-weight: 500;
+            color: #8e94b1;
+        }
+        #speedValue {
+            font-family: monospace;
+            font-weight: bold;
+            color: #3b82f6;
+            background: #090a10;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        /* 右側：動作群組 */
+        .action-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 按鈕基礎樣式 */
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            white-space: nowrap;
+        }
+        button:active {
+            transform: scale(0.97);
+        }
+        
+        .play-btn {
+            background: #2563eb;
+            color: white;
+        }
+        .play-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .share-btn {
+            background: #374151;
+            color: #f3f4f6;
+            border: 1px solid #4b5563;
+        }
+        .share-btn:hover {
+            background: #4b5563;
+        }
+        .share-btn.copied {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        .record-btn {
+            background: #dc2626;
+            color: white;
+        }
+        .record-btn:hover {
+            background: #b91c1c;
+        }
+        button.recording {
+            background: #ea580c;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        @media (max-width: 900px) {
+            body {
+                overflow-y: auto;
+                justify-content: center;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 14px;
+            }
+            .input-section, .slider-section, .action-section {
+                width: 100%;
+                min-width: 0;
+            }
+            .action-section {
+                justify-content: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="canvas-container">
+        <canvas id="marbleCanvas"></canvas>
+    </div>
+
+    <div class="controls" id="controlPanel">
+        <div class="input-section">
+            <input type="text" id="textInput" value="32x32 高精細 藝術點陣" placeholder="請輸入文字...">
+            <button id="renderBtn" class="play-btn">開始流動</button>
+        </div>
+        
+        <div class="slider-section">
+            <span class="speed-label">速度</span>
+            <input type="range" id="speedSlider" min="1" max="20" step="0.5" value="8">
+            <span id="speedValue" style="min-width: 32px;">8.0</span>
+        </div>
+
+        <div class="action-section">
+            <button id="shareBtn" class="share-btn">產生分享連結</button>
+            <button id="recordBtn" class="record-btn">錄影並下載</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('marbleCanvas');
+        const ctx = canvas.getContext('2d');
+        const textInput = document.getElementById('textInput');
+        const renderBtn = document.getElementById('renderBtn');
+        const recordBtn = document.getElementById('recordBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const controlPanel = document.getElementById('controlPanel');
+
+        const ASPECT_RATIO = 16 / 9;
+        
+        // 🚀 核心升級：將矩陣從 24 提升至 32 行
+        const MATRIX_ROWS = 32; 
+        let MATRIX_COLS = 0; 
+        let ballRadius = 0;   
+
+        const COLOR_TEXT = '#ff9f43';      
+        const COLOR_BG = '#1e272e'; 
+        const COLOR_TEXT_GLOW = '#fff2cc'; 
+        const COLOR_BG_GLOW = '#485460';   
+
+        let marbles = [];     
+        let animationFrameId = null;
+        let currentFrame = 0;
+        
+        let isMarqueePhase = false; 
+        let marqueeDelayCounter = 0; 
+        const PAUSE_FRAMES = 30;    
+
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+        let totalStreamCols = 0;
+
+        speedSlider.addEventListener('input', (e) => {
+            let val = parseFloat(e.target.value);
+            speedValue.textContent = val.toFixed(1);
+        });
+
+        class MarqueeMarble {
+            constructor(gridX, gridY, isText, targetX, targetY, enterDelay, speed) {
+                this.gridX = gridX;
+                this.gridY = gridY;
+                this.isText = isText;
+                this.targetX = targetX;
+                this.targetY = targetY;
+
+                this.x = canvas.width + ballRadius * 2 + gridX * (ballRadius * 2);
+                this.y = targetY;
+
+                this.enterDelay = enterDelay; 
+                this.speed = speed;
+                this.hasArrivedPhase1 = false;
+            }
+
+            update(frame, globalSpeed) {
+                if (!isMarqueePhase) {
+                    if (frame >= this.enterDelay && this.x > this.targetX) {
+                        this.x -= this.speed;
+                        if (this.x <= this.targetX) {
+                            this.x = this.targetX;
+                            this.hasArrivedPhase1 = true;
+                        }
+                    } else if (this.x <= this.targetX) {
+                        this.hasArrivedPhase1 = true;
+                    }
+                } else {
+                    this.x -= globalSpeed;
+                }
+            }
+
+            draw() {
+                if (this.x > canvas.width + ballRadius || this.x < -ballRadius) return;
+
+                ctx.beginPath();
+                // 稍微放大彈珠比例 (0.90)，讓高密度點陣更緊密，視覺上更像實體大螢幕
+                ctx.arc(this.x, this.y, ballRadius * 0.90, 0, Math.PI * 2);
+
+                let gradient = ctx.createRadialGradient(
+                    this.x - ballRadius * 0.2, this.y - ballRadius * 0.2, ballRadius * 0.05,
+                    this.x, this.y, ballRadius
+                );
+
+                if (this.isText) {
+                    gradient.addColorStop(0, COLOR_TEXT_GLOW);
+                    gradient.addColorStop(0.3, COLOR_TEXT);
+                    gradient.addColorStop(1, '#662c00');
+                } else {
+                    gradient.addColorStop(0, COLOR_BG_GLOW);
+                    gradient.addColorStop(0.4, COLOR_BG);
+                    gradient.addColorStop(1, '#0b0f12');
+                }
+
+                ctx.fillStyle = gradient;
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                ctx.shadowBlur = 1.5; // 隨高密度縮減陰影，保持畫面乾淨
+                ctx.shadowOffsetX = 1;
+                ctx.shadowOffsetY = 1;
+                ctx.fill();
+                ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+            }
+        }
+
+        function resizeCanvas() {
+            const container = document.querySelector('.canvas-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            canvas.width = width;
+            canvas.height = height;
+
+            ballRadius = height / MATRIX_ROWS / 2;
+            MATRIX_COLS = Math.floor(width / (ballRadius * 2));
+        }
+
+        // 🚀 升級 32 點陣細緻字體生成器
+        function generateLongTextMatrix(text) {
+            const fontCanvas = document.createElement('canvas');
+            const fontCtx = fontCanvas.getContext('2d');
+            fontCtx.imageSmoothingEnabled = false;
+            
+            // 基礎網格尺寸改為 32
+            const size = 32;
+            fontCanvas.width = size * text.length;
+            fontCanvas.height = size;
+
+            fontCtx.fillStyle = '#000';
+            fontCtx.fillRect(0, 0, fontCanvas.width, fontCanvas.height);
+
+            // 字體放大至 30px，使用明體/宋體組合，可完美呈現細膩的橫平豎直筆畫
+            fontCtx.font = `bold 30px "PMingLiU", "MingLiU", "SimSun", "Songti TC", serif`;
+            fontCtx.textBaseline = 'middle';
+            fontCtx.textAlign = 'center';
+            fontCtx.fillStyle = '#fff';
+
+            for (let i = 0; i < text.length; i++) {
+                // 精確對齊 32x32 物理中心點
+                fontCtx.fillText(text[i], size * i + (size / 2), (size / 2) + 1);
+            }
+
+            const imgData = fontCtx.getImageData(0, 0, fontCanvas.width, fontCanvas.height);
+            const data = imgData.data;
+
+            let textMatrix = Array.from({ length: size }, () => []);
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < fontCanvas.width; x++) {
+                    const idx = (y * fontCanvas.width + x) * 4;
+                    // 閾值設為 120，保留更多圓滑的轉折點細節
+                    textMatrix[y].push(data[idx] > 120 ? 1 : 0);
+                }
+            }
+            return textMatrix;
+        }
+
+        function buildScene() {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+            marbles = [];
+            currentFrame = 0;
+            isMarqueePhase = false;
+            marqueeDelayCounter = 0;
+
+            const text = textInput.value || " ";
+            const textMatrix = generateLongTextMatrix(text);
+            const totalTextPixelsWidth = textMatrix[0].length;
+
+            // 調整第一階段初始停留寬度（配合 32 點陣等比縮放）
+            const firstTwoWordsWidth = Math.min(64, totalTextPixelsWidth);
+            const startX = Math.floor((MATRIX_COLS - firstTwoWordsWidth) / 2);
+
+            totalStreamCols = startX + totalTextPixelsWidth + 4;
+
+            for (let y = 0; y < MATRIX_ROWS; y++) {
+                for (let x = 0; x < totalStreamCols; x++) {
+                    
+                    let isText = false;
+                    if (x >= startX && x < startX + totalTextPixelsWidth) {
+                        isText = textMatrix[y][x - startX] === 1;
+                    }
+
+                    const targetX = x * (ballRadius * 2) + ballRadius;
+                    const targetY = y * (ballRadius * 2) + ballRadius;
+
+                    const enterDelay = y * 3; // 稍微壓縮進場時差，讓大矩陣進場更流暢
+                    const initialSpeed = 22;  // 大矩陣顆粒多，提高進場初速
+
+                    marbles.push(new MarqueeMarble(x, y, isText, targetX, targetY, enterDelay, initialSpeed));
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#040508';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                if (!isMarqueePhase) {
+                    const screenMarbles = marbles.filter(m => m.gridX < MATRIX_COLS);
+                    const allArrived = screenMarbles.every(m => m.hasArrivedPhase1);
+                    
+                    if (allArrived) {
+                        marqueeDelayCounter++;
+                        if (marqueeDelayCounter >= PAUSE_FRAMES) {
+                            isMarqueePhase = true; 
+                        }
+                    }
+                }
+
+                const currentMarqueeSpeed = parseFloat(speedSlider.value);
+
+                marbles.forEach(marble => {
+                    marble.update(currentFrame, currentMarqueeSpeed);
+                    marble.draw();
+                });
+
+                if (isRecording && isMarqueePhase) {
+                    const lastMarble = marbles[marbles.length - 1];
+                    if (lastMarble && lastMarble.x < -ballRadius) {
+                        stopRecording();
+                    }
+                }
+
+                currentFrame++;
+                animationFrameId = requestAnimationFrame(animate);
+            }
+
+            animate();
+        }
+
+        // 錄影邏輯
+        function startRecording() {
+            if (isRecording) return;
+            isRecording = true;
+            recordedChunks = [];
+
+            recordBtn.textContent = "錄影中...";
+            recordBtn.classList.add('recording');
+
+            const stream = canvas.captureStream(30);
+            let options = { mimeType: 'video/webm;codecs=vp9' };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options = { mimeType: 'video/webm;codecs=vp8' };
+            }
+
+            mediaRecorder = new MediaRecorder(stream, options);
+            
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `marble_marquee_32x32_${new Date().getTime()}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+
+                recordBtn.textContent = "錄影並下載";
+                recordBtn.classList.remove('recording');
+                isRecording = false;
+            };
+
+            buildScene();
+            mediaRecorder.start();
+        }
+
+        function stopRecording() {
+            if (!isRecording) return;
+            mediaRecorder.stop();
+        }
+
+        // 分享連結生成
+        function generateShareLink() {
+            const textValue = encodeURIComponent(textInput.value);
+            const speedValue = speedSlider.value;
+            
+            const baseUrl = window.location.origin + window.location.pathname;
+            const shareUrl = `${baseUrl}?msg=${textValue}&speed=${speedValue}`;
+
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                shareBtn.textContent = "網址已複製！";
+                shareBtn.classList.add('copied');
+                
+                setTimeout(() => {
+                    shareBtn.textContent = "產生分享連結";
+                    shareBtn.classList.remove('copied');
+                }, 2000);
+            }).catch(err => {
+                alert("網址為：\n" + shareUrl);
+            });
+        }
+
+        function checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const msg = urlParams.get('msg');
+            const speed = urlParams.get('speed');
+
+            if (msg) {
+                textInput.value = decodeURIComponent(msg);
+                if (speed) {
+                    speedSlider.value = speed;
+                    speedValue.textContent = parseFloat(speed).toFixed(1);
+                }
+                
+                controlPanel.classList.add('pure-mode');
+                document.body.style.padding = "0"; 
+                
+                const container = document.querySelector('.canvas-container');
+                container.style.maxHeight = '100vh';
+                container.style.border = 'none';
+                container.style.borderRadius = '0';
+                container.style.boxShadow = 'none';
+                
+                resizeCanvas();
+                buildScene();
+            } else {
+                resizeCanvas();
+                ctx.fillStyle = '#040508';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            buildScene();
+        });
+
+        renderBtn.addEventListener('click', buildScene);
+        recordBtn.addEventListener('click', startRecording);
+        shareBtn.addEventListener('click', generateShareLink);
+        
+        textInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') buildScene();
+        });
+
+        checkUrlParams();
+    </script>
+</body>
+</html>
