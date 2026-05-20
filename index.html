@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>32x32 高精細點陣彈珠跑馬燈</title>
+    <title>32x32 高精細點陣彈珠跑馬燈 (繽紛色彩版)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -66,13 +66,13 @@
             display: none !important;
         }
 
-        /* 左側：輸入群組 */
+        /* 左側：輸入與顏色群組 */
         .input-section {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             flex: 2; 
-            min-width: 320px;
+            min-width: 350px;
         }
         input[type="text"] {
             flex: 1;
@@ -88,6 +88,34 @@
         input[type="text"]:focus {
             border-color: #3b82f6;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        /* 精緻的圓形色彩選擇器 */
+        .color-picker-wrapper {
+            position: relative;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid #282a3a;
+            overflow: hidden;
+            cursor: pointer;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            transition: transform 0.1s, border-color 0.2s;
+        }
+        .color-picker-wrapper:hover {
+            border-color: #4b5563;
+            transform: scale(1.05);
+        }
+        input[type="color"] {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            width: 46px;
+            height: 46px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
         }
 
         /* 中間：速度控制群組 */
@@ -215,17 +243,23 @@
     </div>
 
     <div class="controls" id="controlPanel">
+        <!-- 左側：輸入群組 + 顏色挑選器 -->
         <div class="input-section">
-            <input type="text" id="textInput" value="32x32 高精細 藝術點陣" placeholder="請輸入文字...">
+            <div class="color-picker-wrapper" title="更換文字顏色">
+                <input type="color" id="textColorPicker" value="#ff9f43">
+            </div>
+            <input type="text" id="textInput" value="客製化色彩 炫彩霓虹" placeholder="請輸入文字...">
             <button id="renderBtn" class="play-btn">開始流動</button>
         </div>
         
+        <!-- 中間：速度控制 -->
         <div class="slider-section">
             <span class="speed-label">速度</span>
             <input type="range" id="speedSlider" min="1" max="20" step="0.5" value="8">
             <span id="speedValue" style="min-width: 32px;">8.0</span>
         </div>
 
+        <!-- 右側：功能動作 -->
         <div class="action-section">
             <button id="shareBtn" class="share-btn">產生分享連結</button>
             <button id="recordBtn" class="record-btn">錄影並下載</button>
@@ -241,19 +275,22 @@
         const shareBtn = document.getElementById('shareBtn');
         const speedSlider = document.getElementById('speedSlider');
         const speedValue = document.getElementById('speedValue');
+        const textColorPicker = document.getElementById('textColorPicker');
         const controlPanel = document.getElementById('controlPanel');
 
         const ASPECT_RATIO = 16 / 9;
-        
-        // 🚀 核心升級：將矩陣從 24 提升至 32 行
         const MATRIX_ROWS = 32; 
         let MATRIX_COLS = 0; 
         let ballRadius = 0;   
 
-        const COLOR_TEXT = '#ff9f43';      
+        // 底色靜態粒子樣式
         const COLOR_BG = '#1e272e'; 
-        const COLOR_TEXT_GLOW = '#fff2cc'; 
         const COLOR_BG_GLOW = '#485460';   
+
+        // 🎨 顏色動態運算容器
+        let currentTextColor = '#ff9f43';
+        let currentTextColorGlow = '#fff2cc';
+        let currentTextColorShadow = '#662c00';
 
         let marbles = [];     
         let animationFrameId = null;
@@ -267,6 +304,33 @@
         let recordedChunks = [];
         let isRecording = false;
         let totalStreamCols = 0;
+
+        // 監聽顏色選擇器的即時變化
+        textColorPicker.addEventListener('input', (e) => {
+            updatePalette(e.target.value);
+        });
+
+        // 🚀 核心演算法：根據選擇的顏色，自動推算高亮與陰影，保持3D光澤感
+        function updatePalette(hexColor) {
+            currentTextColor = hexColor;
+            
+            // 將 HEX 轉為 RGB
+            let r = parseInt(hexColor.slice(1, 3), 16);
+            let g = parseInt(hexColor.slice(3, 5), 16);
+            let b = parseInt(hexColor.slice(5, 7), 16);
+
+            // 計算反光高亮 (往白色靠攏)
+            let nr = Math.min(255, Math.floor(r + (255 - r) * 0.7));
+            let ng = Math.min(255, Math.floor(g + (255 - g) * 0.7));
+            let nb = Math.min(255, Math.floor(b + (255 - b) * 0.7));
+            currentTextColorGlow = `rgb(${nr}, ${ng}, ${nb})`;
+
+            // 計算深色陰影 (降低亮度)
+            let dr = Math.max(0, Math.floor(r * 0.4));
+            let dg = Math.max(0, Math.floor(g * 0.4));
+            let db = Math.max(0, Math.floor(b * 0.4));
+            currentTextColorShadow = `rgb(${dr}, ${dg}, ${db})`;
+        }
 
         speedSlider.addEventListener('input', (e) => {
             let val = parseFloat(e.target.value);
@@ -309,7 +373,6 @@
                 if (this.x > canvas.width + ballRadius || this.x < -ballRadius) return;
 
                 ctx.beginPath();
-                // 稍微放大彈珠比例 (0.90)，讓高密度點陣更緊密，視覺上更像實體大螢幕
                 ctx.arc(this.x, this.y, ballRadius * 0.90, 0, Math.PI * 2);
 
                 let gradient = ctx.createRadialGradient(
@@ -318,9 +381,10 @@
                 );
 
                 if (this.isText) {
-                    gradient.addColorStop(0, COLOR_TEXT_GLOW);
-                    gradient.addColorStop(0.3, COLOR_TEXT);
-                    gradient.addColorStop(1, '#662c00');
+                    // 套用即時更換的色彩光學組合
+                    gradient.addColorStop(0, currentTextColorGlow);
+                    gradient.addColorStop(0.3, currentTextColor);
+                    gradient.addColorStop(1, currentTextColorShadow);
                 } else {
                     gradient.addColorStop(0, COLOR_BG_GLOW);
                     gradient.addColorStop(0.4, COLOR_BG);
@@ -329,7 +393,7 @@
 
                 ctx.fillStyle = gradient;
                 ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-                ctx.shadowBlur = 1.5; // 隨高密度縮減陰影，保持畫面乾淨
+                ctx.shadowBlur = 1.5;
                 ctx.shadowOffsetX = 1;
                 ctx.shadowOffsetY = 1;
                 ctx.fill();
@@ -349,13 +413,11 @@
             MATRIX_COLS = Math.floor(width / (ballRadius * 2));
         }
 
-        // 🚀 升級 32 點陣細緻字體生成器
         function generateLongTextMatrix(text) {
             const fontCanvas = document.createElement('canvas');
             const fontCtx = fontCanvas.getContext('2d');
             fontCtx.imageSmoothingEnabled = false;
             
-            // 基礎網格尺寸改為 32
             const size = 32;
             fontCanvas.width = size * text.length;
             fontCanvas.height = size;
@@ -363,14 +425,12 @@
             fontCtx.fillStyle = '#000';
             fontCtx.fillRect(0, 0, fontCanvas.width, fontCanvas.height);
 
-            // 字體放大至 30px，使用明體/宋體組合，可完美呈現細膩的橫平豎直筆畫
             fontCtx.font = `bold 30px "PMingLiU", "MingLiU", "SimSun", "Songti TC", serif`;
             fontCtx.textBaseline = 'middle';
             fontCtx.textAlign = 'center';
             fontCtx.fillStyle = '#fff';
 
             for (let i = 0; i < text.length; i++) {
-                // 精確對齊 32x32 物理中心點
                 fontCtx.fillText(text[i], size * i + (size / 2), (size / 2) + 1);
             }
 
@@ -381,7 +441,6 @@
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < fontCanvas.width; x++) {
                     const idx = (y * fontCanvas.width + x) * 4;
-                    // 閾值設為 120，保留更多圓滑的轉折點細節
                     textMatrix[y].push(data[idx] > 120 ? 1 : 0);
                 }
             }
@@ -400,7 +459,6 @@
             const textMatrix = generateLongTextMatrix(text);
             const totalTextPixelsWidth = textMatrix[0].length;
 
-            // 調整第一階段初始停留寬度（配合 32 點陣等比縮放）
             const firstTwoWordsWidth = Math.min(64, totalTextPixelsWidth);
             const startX = Math.floor((MATRIX_COLS - firstTwoWordsWidth) / 2);
 
@@ -417,8 +475,8 @@
                     const targetX = x * (ballRadius * 2) + ballRadius;
                     const targetY = y * (ballRadius * 2) + ballRadius;
 
-                    const enterDelay = y * 3; // 稍微壓縮進場時差，讓大矩陣進場更流暢
-                    const initialSpeed = 22;  // 大矩陣顆粒多，提高進場初速
+                    const enterDelay = y * 3; 
+                    const initialSpeed = 22;  
 
                     marbles.push(new MarqueeMarble(x, y, isText, targetX, targetY, enterDelay, initialSpeed));
                 }
@@ -491,7 +549,7 @@
                 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `marble_marquee_32x32_${new Date().getTime()}.webm`;
+                a.download = `marble_marquee_color_${new Date().getTime()}.webm`;
                 document.body.appendChild(a);
                 a.click();
                 
@@ -514,13 +572,15 @@
             mediaRecorder.stop();
         }
 
-        // 分享連結生成
+        // 🔗 分享連結生成（加入顏色參數）
         function generateShareLink() {
             const textValue = encodeURIComponent(textInput.value);
             const speedValue = speedSlider.value;
+            // 去掉 '#' 號以利 URL 參數安全傳遞
+            const colorValue = textColorPicker.value.replace('#', '');
             
             const baseUrl = window.location.origin + window.location.pathname;
-            const shareUrl = `${baseUrl}?msg=${textValue}&speed=${speedValue}`;
+            const shareUrl = `${baseUrl}?msg=${textValue}&speed=${speedValue}&color=${colorValue}`;
 
             navigator.clipboard.writeText(shareUrl).then(() => {
                 shareBtn.textContent = "網址已複製！";
@@ -539,6 +599,16 @@
             const urlParams = new URLSearchParams(window.location.search);
             const msg = urlParams.get('msg');
             const speed = urlParams.get('speed');
+            const color = urlParams.get('color');
+
+            // 讀取顏色參數
+            if (color) {
+                const hexColor = '#' + color;
+                textColorPicker.value = hexColor;
+                updatePalette(hexColor);
+            } else {
+                updatePalette(textColorPicker.value);
+            }
 
             if (msg) {
                 textInput.value = decodeURIComponent(msg);
